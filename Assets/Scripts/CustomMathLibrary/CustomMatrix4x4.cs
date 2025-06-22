@@ -39,7 +39,7 @@ public struct CustomMatrix4x4
     /// </summary>
     public static CustomMatrix4x4 operator +(CustomMatrix4x4 a, CustomMatrix4x4 b)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4();
+        CustomMatrix4x4 result = new CustomMatrix4x4(true);
         for (int row = 0; row < 4; row++)
         {
             for (int col = 0; col < 4; col++)
@@ -56,7 +56,7 @@ public struct CustomMatrix4x4
     /// </summary>
     public static CustomMatrix4x4 operator *(CustomMatrix4x4 a, CustomMatrix4x4 b)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4();
+        CustomMatrix4x4 result = new CustomMatrix4x4(true);
         for (int row = 0; row < 4; row++)
         {
             for (int col = 0; col < 4; col++)
@@ -106,7 +106,7 @@ public struct CustomMatrix4x4
     /// </summary>
     public static CustomMatrix4x4 CreateScaling(float sx, float sy, float sz)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4();
+        CustomMatrix4x4 result = new CustomMatrix4x4(true);
         result.m[0, 0] = sx; // scale X axis
         result.m[1, 1] = sy; // scale Y axis
         result.m[2, 2] = sz; // scale Z axis
@@ -129,6 +129,46 @@ public struct CustomMatrix4x4
         result.m[0, 1] = -sin;  // -sin(theta)
         result.m[1, 0] = sin;   // sin(theta)
         result.m[1, 1] = cos;   // cos(theta)
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a full rotation matrix from Euler angles (pitch, yaw, roll in degrees).
+    /// Order of operations: Z (roll), X (pitch), Y (yaw).
+    /// </summary>
+    public static CustomMatrix4x4 CreateRotationXYZ(float pitch, float yaw, float roll)
+    {
+        float radX = pitch * Mathf.Deg2Rad;
+        float radY = yaw * Mathf.Deg2Rad;
+        float radZ = roll * Mathf.Deg2Rad;
+
+        float cx = Mathf.Cos(radX); float sx = Mathf.Sin(radX);
+        float cy = Mathf.Cos(radY); float sy = Mathf.Sin(radY);
+        float cz = Mathf.Cos(radZ); float sz = Mathf.Sin(radZ);
+
+        // Composite rotation matrix R = Rz * Rx * Ry
+        CustomMatrix4x4 result = new CustomMatrix4x4(true);
+
+        result.m[0, 0] = cy * cz + sx * sy * sz;
+        result.m[0, 1] = -cy * sz + sx * sy * cz;
+        result.m[0, 2] = cx * sy;
+        result.m[0, 3] = 0;
+
+        result.m[1, 0] = cx * sz;
+        result.m[1, 1] = cx * cz;
+        result.m[1, 2] = -sx;
+        result.m[1, 3] = 0;
+
+        result.m[2, 0] = -sy * cz + sx * cy * sz;
+        result.m[2, 1] = sy * sz + sx * cy * cz;
+        result.m[2, 2] = cx * cy;
+        result.m[2, 3] = 0;
+
+        result.m[3, 0] = 0;
+        result.m[3, 1] = 0;
+        result.m[3, 2] = 0;
+        result.m[3, 3] = 1;
+
         return result;
     }
 

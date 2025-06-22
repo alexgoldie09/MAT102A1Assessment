@@ -107,6 +107,16 @@ public struct CustomVector3
     }
 
     /// <summary>
+    /// Computes the angle in degrees between two CustomVector3 directions.
+    /// Useful for directional comparison or alignment logic.
+    /// </summary>
+    public static float AngleBetween(CustomVector3 a, CustomVector3 b)
+    {
+        float dot = Dot(a.Normalize(), b.Normalize());
+        return Mathf.Acos(Mathf.Clamp(dot, -1f, 1f)) * Mathf.Rad2Deg;
+    }
+
+    /// <summary>
     /// Converts this CustomVector3 to UnityEngine.Vector3.
     /// </summary>
     public Vector3 ToUnityVector3()

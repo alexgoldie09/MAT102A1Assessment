@@ -74,6 +74,63 @@ public struct CustomQuaternion
         ).Normalize();
     }
 
+    public static CustomQuaternion FromEulerAngles(float pitch, float yaw, float roll)
+    {
+        var xRot = FromAxisAngle(new CustomVector3(1, 0, 0), pitch);
+        var yRot = FromAxisAngle(new CustomVector3(0, 1, 0), yaw);
+        var zRot = FromAxisAngle(new CustomVector3(0, 0, 1), roll);
+        return (yRot * xRot * zRot).Normalize();
+    }
+
+    /// <summary>
+    /// Creates a CustomQuaternion from a rotation matrix (assumes orthogonal 3x3).
+    /// Converts a CustomMatrix4x4 into a CustomQuaternion.
+    /// </summary>
+    public static CustomQuaternion FromMatrix4x4(CustomMatrix4x4 m)
+    {
+        float trace = m.m[0, 0] + m.m[1, 1] + m.m[2, 2];
+
+        if (trace > 0f)
+        {
+            float s = 0.5f / Mathf.Sqrt(trace + 1f);
+            float w = 0.25f / s;
+            float x = (m.m[2, 1] - m.m[1, 2]) * s;
+            float y = (m.m[0, 2] - m.m[2, 0]) * s;
+            float z = (m.m[1, 0] - m.m[0, 1]) * s;
+            return new CustomQuaternion(x, y, z, w).Normalize();
+        }
+        else
+        {
+            if (m.m[0, 0] > m.m[1, 1] && m.m[0, 0] > m.m[2, 2])
+            {
+                float s = 2f * Mathf.Sqrt(1f + m.m[0, 0] - m.m[1, 1] - m.m[2, 2]);
+                float w = (m.m[2, 1] - m.m[1, 2]) / s;
+                float x = 0.25f * s;
+                float y = (m.m[0, 1] + m.m[1, 0]) / s;
+                float z = (m.m[0, 2] + m.m[2, 0]) / s;
+                return new CustomQuaternion(x, y, z, w).Normalize();
+            }
+            else if (m.m[1, 1] > m.m[2, 2])
+            {
+                float s = 2f * Mathf.Sqrt(1f + m.m[1, 1] - m.m[0, 0] - m.m[2, 2]);
+                float w = (m.m[0, 2] - m.m[2, 0]) / s;
+                float x = (m.m[0, 1] + m.m[1, 0]) / s;
+                float y = 0.25f * s;
+                float z = (m.m[1, 2] + m.m[2, 1]) / s;
+                return new CustomQuaternion(x, y, z, w).Normalize();
+            }
+            else
+            {
+                float s = 2f * Mathf.Sqrt(1f + m.m[2, 2] - m.m[0, 0] - m.m[1, 1]);
+                float w = (m.m[1, 0] - m.m[0, 1]) / s;
+                float x = (m.m[0, 2] + m.m[2, 0]) / s;
+                float y = (m.m[1, 2] + m.m[2, 1]) / s;
+                float z = 0.25f * s;
+                return new CustomQuaternion(x, y, z, w).Normalize();
+            }
+        }
+    }
+
     /// <summary>
     /// Converts this quaternion to a 4x4 rotation matrix.
     /// Can be used with CustomMatrix4x4 * CustomVector3 to apply rotation.

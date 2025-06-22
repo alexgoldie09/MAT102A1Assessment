@@ -1,51 +1,60 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
 
 /// <summary>
 /// Spaceship controller — Stable Rotation (Pro Flight Pattern).
-/// - Mouse Y → Pitch (clamped)
-/// - Mouse X → Roll (clamped optional or full)
-/// - A/D → Yaw (world space yaw, stable)
-/// - W/S → Move forward/back
-/// - Space → Boost
-/// - Cursor locked.
 /// </summary>
 public class SpaceshipController : MonoBehaviour
 {
-    // Spaceship state
     private CustomVector3 position = new CustomVector3(0, 0, 0);
     private CustomQuaternion rotation = CustomQuaternion.Identity();
 
-    // Explicit rotation state for stability
     private float currentYaw = 0f;
     private float currentPitch = 0f;
     private float currentRoll = 0f;
 
-    // Settings
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float boostMultiplier = 2f;
+
+    [Header("Rotation Settings")]
     public float rotateSpeed = 60f;
     public float mouseSensitivity = 0.5f;
     public float mouseDeadzone = 0.02f;
-
     public float pitchScale = 0.5f;
     public float rollScale = 0.5f;
 
+    [Header("Clamping")]
     public float minPitch = -60f;
     public float maxPitch = 60f;
-
     public bool clampRoll = false;
     public float minRoll = -60f;
     public float maxRoll = 60f;
+
+    [Header("World Bounds")]
+    [SerializeField] private Transform boundsObject; // Cube object used as AABB boundary
+
+    [Header("Post-Processing")]
+    public VolumeProfile volumeProfile;
+    private LensDistortion lensDistortion;
+
 
     private bool mouseHasMoved = false;
 
     void Start()
     {
-        // Lock cursor
+        if (volumeProfile != null)
+        {
+            if (volumeProfile.TryGet(out LensDistortion ld))
+            {
+                lensDistortion = ld;
+            }
+        }
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        // Initial rotation = identity
         rotation = CustomQuaternion.Identity();
     }
 
@@ -55,82 +64,100 @@ public class SpaceshipController : MonoBehaviour
 
         // --- Mouse Input ---
         float mouseX = -Input.GetAxis("Mouse X"); // Roll
-        float mouseY = Input.GetAxis("Mouse Y"); // Pitch (invert)
+        float mouseY = Input.GetAxis("Mouse Y");  // Pitch
 
-        // Detect if mouse moved
         if (!mouseHasMoved && (Mathf.Abs(mouseX) > mouseDeadzone || Mathf.Abs(mouseY) > mouseDeadzone))
-        {
             mouseHasMoved = true;
-        }
 
-        // --- Apply Yaw (world yaw axis) ---
+        // --- Yaw (A/D) ---
         float yawInput = Input.GetAxis("Horizontal");
         if (Mathf.Abs(yawInput) > 0.001f)
-        {
-            float yawAngle = rotateSpeed * yawInput * deltaTime;
-            currentYaw += yawAngle;
-        }
+            currentYaw += rotateSpeed * yawInput * deltaTime;
 
-        // --- Apply Pitch (clamped) ---
+        // --- Pitch (Mouse Y) ---
         if (mouseHasMoved && Mathf.Abs(mouseY) > mouseDeadzone)
         {
-            float pitchInput = mouseY * pitchScale;
-            float pitchAngle = rotateSpeed * pitchInput * mouseSensitivity * deltaTime;
-
-            currentPitch = Mathf.Clamp(currentPitch + pitchAngle, minPitch, maxPitch);
+            float pitch = rotateSpeed * mouseY * pitchScale * mouseSensitivity * deltaTime;
+            currentPitch = Mathf.Clamp(currentPitch + pitch, minPitch, maxPitch);
         }
 
-        // --- Apply Roll (clamped optional) ---
+        // --- Roll (Mouse X) ---
         if (mouseHasMoved && Mathf.Abs(mouseX) > mouseDeadzone)
         {
-            float rollInput = mouseX * rollScale;
-            float rollAngle = rotateSpeed * rollInput * mouseSensitivity * deltaTime;
-
-            if (clampRoll)
-            {
-                currentRoll = Mathf.Clamp(currentRoll + rollAngle, minRoll, maxRoll);
-            }
-            else
-            {
-                currentRoll += rollAngle;
-            }
+            float roll = rotateSpeed * mouseX * rollScale * mouseSensitivity * deltaTime;
+            currentRoll = clampRoll ? Mathf.Clamp(currentRoll + roll, minRoll, maxRoll) : currentRoll + roll;
         }
 
-        // --- Rebuild full rotation from scratch ---
-        CustomQuaternion yawQ = CustomQuaternion.FromAxisAngle(new CustomVector3(0, 1, 0), currentYaw);
-        CustomQuaternion pitchQ = CustomQuaternion.FromAxisAngle(new CustomVector3(1, 0, 0), currentPitch);
-        CustomQuaternion rollQ = CustomQuaternion.FromAxisAngle(new CustomVector3(0, 0, 1), currentRoll);
+        // --- Apply Rotation using CreateRotationXYZ ---
+        CustomMatrix4x4 rotationMatrix = CustomMatrix4x4.CreateRotationXYZ(currentPitch, currentYaw, currentRoll);
+        rotation = CustomQuaternion.FromMatrix4x4(rotationMatrix).Normalize();
 
-        rotation = (yawQ * pitchQ * rollQ).Normalize();
-
-        // --- Movement Input ---
+        // --- Movement ---
         float moveInput = Input.GetAxis("Vertical");
-
-        float currentMoveSpeed = moveSpeed;
-        if (Input.GetKey(KeyCode.Space))
-        {
-            currentMoveSpeed *= boostMultiplier;
-        }
+        float speed = Input.GetKey(KeyCode.Space) ? moveSpeed * boostMultiplier : moveSpeed;
 
         if (Mathf.Abs(moveInput) > 0.001f)
         {
-            // Get forward vector from rotation
-            CustomMatrix4x4 rotMatrix = rotation.ToMatrix4x4();
-            CustomVector3 forward = new CustomVector3(rotMatrix.m[0, 2], rotMatrix.m[1, 2], rotMatrix.m[2, 2]).Normalize();
-
-            // Move along forward
-            position += forward * (currentMoveSpeed * moveInput * deltaTime);
+            CustomVector3 forward = new CustomVector3(rotationMatrix.m[0, 2], rotationMatrix.m[1, 2], rotationMatrix.m[2, 2]).Normalize();
+            position += forward * (speed * moveInput * deltaTime);
         }
 
-        // --- Apply final transform ---
+        // --- Clamp to AABB Bounds ---
+        if (boundsObject != null)
+        {
+            CustomVector3 center = new CustomVector3(
+                boundsObject.position.x,
+                boundsObject.position.y,
+                boundsObject.position.z
+            );
+
+            CustomVector3 halfExtents = new CustomVector3(
+                boundsObject.localScale.x / 2f,
+                boundsObject.localScale.y / 2f,
+                boundsObject.localScale.z / 2f
+            );
+
+            CustomVector3 relative = position - center;
+
+            position = new CustomVector3(
+                Mathf.Clamp(relative.x, -halfExtents.x, halfExtents.x),
+                Mathf.Clamp(relative.y, -halfExtents.y, halfExtents.y),
+                Mathf.Clamp(relative.z, -halfExtents.z, halfExtents.z)
+            ) + center;
+        }
+
+        // --- Apply Transform ---
         transform.position = position.ToUnityVector3();
         transform.rotation = rotation.ToUnityQuaternion();
 
-        // --- Optional: Unlock mouse on Escape ---
+        // --- Apply Effects ---
+        if (lensDistortion != null)
+        {
+            float targetIntensity = Input.GetKey(KeyCode.Space) ? -0.8f : 0f;
+            lensDistortion.intensity.value = Mathf.Clamp(
+                Mathf.Lerp(lensDistortion.intensity.value, targetIntensity, Time.deltaTime * 5f),
+                -1f, 0f
+            );
+
+        }
+
+        // --- Escape Unlock ---
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
     }
+
+    void OnDrawGizmos()
+    {
+        if (boundsObject == null)
+            return;
+
+        Gizmos.color = Color.green;
+
+        // Draw the wire cube representing boundsObject
+        Gizmos.DrawWireCube(boundsObject.position, boundsObject.localScale);
+    }
+
 }
