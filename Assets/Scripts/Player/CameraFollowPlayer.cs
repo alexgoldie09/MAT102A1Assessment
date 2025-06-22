@@ -15,8 +15,10 @@ public class CameraFollowPlayer : MonoBehaviour
         }
     }
 
-    void Update()
+    void LateUpdate()
     {
+        if (player == null) return;
+
         // Get ship's orientation vectors
         CustomVector3 playerPos = new CustomVector3(player.position.x, player.position.y, player.position.z);
         CustomVector3 forward = new CustomVector3(player.forward.x, player.forward.y, player.forward.z).Normalize();

@@ -133,6 +133,41 @@ public struct CustomMatrix4x4
     }
 
     /// <summary>
+    /// Creates a rotation matrix around the Y-axis (yaw).
+    /// </summary>
+    public static CustomMatrix4x4 CreateRotationY(float angleDegrees)
+    {
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
+
+        CustomMatrix4x4 result = new CustomMatrix4x4(true); // start with identity
+        result.m[0, 0] = cos;
+        result.m[0, 2] = sin;
+        result.m[2, 0] = -sin;
+        result.m[2, 2] = cos;
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a rotation matrix around the X-axis (pitch).
+    /// </summary>
+    public static CustomMatrix4x4 CreateRotationX(float angleDegrees)
+    {
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
+
+        CustomMatrix4x4 result = new CustomMatrix4x4(true); // start with identity
+        result.m[1, 1] = cos;
+        result.m[1, 2] = -sin;
+        result.m[2, 1] = sin;
+        result.m[2, 2] = cos;
+        return result;
+    }
+
+
+    /// <summary>
     /// Creates a full rotation matrix from Euler angles (pitch, yaw, roll in degrees).
     /// Order of operations: Z (roll), X (pitch), Y (yaw).
     /// </summary>
@@ -162,6 +197,48 @@ public struct CustomMatrix4x4
         result.m[2, 0] = -sy * cz + sx * cy * sz;
         result.m[2, 1] = sy * sz + sx * cy * cz;
         result.m[2, 2] = cx * cy;
+        result.m[2, 3] = 0;
+
+        result.m[3, 0] = 0;
+        result.m[3, 1] = 0;
+        result.m[3, 2] = 0;
+        result.m[3, 3] = 1;
+
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a rotation matrix around an arbitrary axis (unit vector) by angleDegrees.
+    /// Uses Rodrigues' rotation formula.
+    /// </summary>
+    public static CustomMatrix4x4 CreateRotationAroundAxis(CustomVector3 axis, float angleDegrees)
+    {
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
+        float oneMinusCos = 1f - cos;
+
+        axis = axis.Normalize(); // ensure axis is a unit vector
+
+        float x = axis.x;
+        float y = axis.y;
+        float z = axis.z;
+
+        CustomMatrix4x4 result = new CustomMatrix4x4(true);
+
+        result.m[0, 0] = cos + x * x * oneMinusCos;
+        result.m[0, 1] = x * y * oneMinusCos - z * sin;
+        result.m[0, 2] = x * z * oneMinusCos + y * sin;
+        result.m[0, 3] = 0;
+
+        result.m[1, 0] = y * x * oneMinusCos + z * sin;
+        result.m[1, 1] = cos + y * y * oneMinusCos;
+        result.m[1, 2] = y * z * oneMinusCos - x * sin;
+        result.m[1, 3] = 0;
+
+        result.m[2, 0] = z * x * oneMinusCos - y * sin;
+        result.m[2, 1] = z * y * oneMinusCos + x * sin;
+        result.m[2, 2] = cos + z * z * oneMinusCos;
         result.m[2, 3] = 0;
 
         result.m[3, 0] = 0;

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Spaceship controller — Stable Rotation (Pro Flight Pattern).
@@ -34,65 +34,70 @@ public class SpaceshipController : MonoBehaviour
     public float maxRoll = 60f;
 
     [Header("World Bounds")]
-    [SerializeField] private Transform boundsObject; // Cube object used as AABB boundary
+    [SerializeField] private Transform boundsObject;
 
     [Header("Post-Processing")]
     public VolumeProfile volumeProfile;
     private LensDistortion lensDistortion;
 
+    [Header("Game VFX")]
+    public GameObject destroyVFX;
 
     private bool mouseHasMoved = false;
 
+    private CustomSphereCollider myCollider;
+
     void Start()
     {
-        if (volumeProfile != null)
-        {
-            if (volumeProfile.TryGet(out LensDistortion ld))
-            {
-                lensDistortion = ld;
-            }
-        }
+        if (volumeProfile != null && volumeProfile.TryGet(out LensDistortion ld))
+            lensDistortion = ld;
+
+        myCollider = GetComponent<CustomSphereCollider>();
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
         rotation = CustomQuaternion.Identity();
+        position = new CustomVector3(transform.position.x, transform.position.y, transform.position.z);
     }
 
     void Update()
     {
         float deltaTime = Time.deltaTime;
+        HandleMovement(deltaTime);
+        HandleEffects(deltaTime);
+        HandleEscapeUnlock();
+        CheckCollisions();
+    }
 
+    private void HandleMovement(float deltaTime)
+    {
         // --- Mouse Input ---
-        float mouseX = -Input.GetAxis("Mouse X"); // Roll
-        float mouseY = Input.GetAxis("Mouse Y");  // Pitch
+        float mouseX = -Input.GetAxis("Mouse X");
+        float mouseY = Input.GetAxis("Mouse Y");
 
         if (!mouseHasMoved && (Mathf.Abs(mouseX) > mouseDeadzone || Mathf.Abs(mouseY) > mouseDeadzone))
             mouseHasMoved = true;
 
-        // --- Yaw (A/D) ---
         float yawInput = Input.GetAxis("Horizontal");
         if (Mathf.Abs(yawInput) > 0.001f)
             currentYaw += rotateSpeed * yawInput * deltaTime;
 
-        // --- Pitch (Mouse Y) ---
         if (mouseHasMoved && Mathf.Abs(mouseY) > mouseDeadzone)
         {
             float pitch = rotateSpeed * mouseY * pitchScale * mouseSensitivity * deltaTime;
             currentPitch = Mathf.Clamp(currentPitch + pitch, minPitch, maxPitch);
         }
 
-        // --- Roll (Mouse X) ---
         if (mouseHasMoved && Mathf.Abs(mouseX) > mouseDeadzone)
         {
             float roll = rotateSpeed * mouseX * rollScale * mouseSensitivity * deltaTime;
             currentRoll = clampRoll ? Mathf.Clamp(currentRoll + roll, minRoll, maxRoll) : currentRoll + roll;
         }
 
-        // --- Apply Rotation using CreateRotationXYZ ---
         CustomMatrix4x4 rotationMatrix = CustomMatrix4x4.CreateRotationXYZ(currentPitch, currentYaw, currentRoll);
         rotation = CustomQuaternion.FromMatrix4x4(rotationMatrix).Normalize();
 
-        // --- Movement ---
         float moveInput = Input.GetAxis("Vertical");
         float speed = Input.GetKey(KeyCode.Space) ? moveSpeed * boostMultiplier : moveSpeed;
 
@@ -102,21 +107,10 @@ public class SpaceshipController : MonoBehaviour
             position += forward * (speed * moveInput * deltaTime);
         }
 
-        // --- Clamp to AABB Bounds ---
         if (boundsObject != null)
         {
-            CustomVector3 center = new CustomVector3(
-                boundsObject.position.x,
-                boundsObject.position.y,
-                boundsObject.position.z
-            );
-
-            CustomVector3 halfExtents = new CustomVector3(
-                boundsObject.localScale.x / 2f,
-                boundsObject.localScale.y / 2f,
-                boundsObject.localScale.z / 2f
-            );
-
+            CustomVector3 center = new CustomVector3(boundsObject.position.x, boundsObject.position.y, boundsObject.position.z);
+            CustomVector3 halfExtents = new CustomVector3(boundsObject.localScale.x / 2f, boundsObject.localScale.y / 2f, boundsObject.localScale.z / 2f);
             CustomVector3 relative = position - center;
 
             position = new CustomVector3(
@@ -126,26 +120,62 @@ public class SpaceshipController : MonoBehaviour
             ) + center;
         }
 
-        // --- Apply Transform ---
-        transform.position = position.ToUnityVector3();
-        transform.rotation = rotation.ToUnityQuaternion();
+        CustomMatrix4x4 translationMatrix = CustomMatrix4x4.CreateTranslation(position.x, position.y, position.z);
+        CustomMatrix4x4 fullMatrix = translationMatrix * rotationMatrix;
 
-        // --- Apply Effects ---
+        transform.position = new CustomVector3(fullMatrix.m[0, 3], fullMatrix.m[1, 3], fullMatrix.m[2, 3]).ToUnityVector3();
+        transform.rotation = rotation.ToUnityQuaternion();
+    }
+
+    private void HandleEffects(float deltaTime)
+    {
         if (lensDistortion != null)
         {
             float targetIntensity = Input.GetKey(KeyCode.Space) ? -0.8f : 0f;
             lensDistortion.intensity.value = Mathf.Clamp(
-                Mathf.Lerp(lensDistortion.intensity.value, targetIntensity, Time.deltaTime * 5f),
+                Mathf.Lerp(lensDistortion.intensity.value, targetIntensity, deltaTime * 5f),
                 -1f, 0f
             );
-
         }
+    }
 
-        // --- Escape Unlock ---
+    private void HandleEscapeUnlock()
+    {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+    }
+    private void CheckCollisions()
+    {
+        if (myCollider == null)
+            return;
+
+        // Store detected collision target
+        CustomSphereCollider hit = null;
+
+        foreach (var other in CustomSphereCollider.All)
+        {
+            if (other != myCollider && myCollider.IsCollidingWith(other))
+            {
+                hit = other;
+                break; // Stop checking after the first collision
+            }
+        }
+
+        if (hit != null)
+        {
+            Debug.Log($"Collided with {hit.name}");
+            // Spawn VFX if assigned
+            if (destroyVFX != null)
+                Instantiate(destroyVFX, transform.position, Quaternion.identity);
+
+            // Trigger game over
+            GameManager.Instance.TriggerGameOver(5f);
+
+            // Disable ship visuals + logic
+            gameObject.SetActive(false);
         }
     }
 
@@ -155,9 +185,6 @@ public class SpaceshipController : MonoBehaviour
             return;
 
         Gizmos.color = Color.green;
-
-        // Draw the wire cube representing boundsObject
         Gizmos.DrawWireCube(boundsObject.position, boundsObject.localScale);
     }
-
 }

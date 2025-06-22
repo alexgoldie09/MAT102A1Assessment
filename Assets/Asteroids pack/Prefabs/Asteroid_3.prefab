@@ -11,7 +11,8 @@ GameObject:
   - component: {fileID: 3227043935615972179}
   - component: {fileID: 6778775772668590801}
   - component: {fileID: 4564258666506977473}
-  - component: {fileID: -8685251834296238825}
+  - component: {fileID: 3666006750522798532}
+  - component: {fileID: 2906022488032356875}
   m_Layer: 0
   m_Name: Asteroid_3
   m_TagString: Untagged
@@ -27,13 +28,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8003495884289897023}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+  m_LocalRotation: {x: -0.7069834, y: 0, z: 0, w: 0.7072302}
   m_LocalPosition: {x: -2.68, y: 0.034639686, z: -0.09445293}
-  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -89.98, y: 0, z: 0}
 --- !u!33 &6778775772668590801
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -87,7 +88,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &-8685251834296238825
+--- !u!114 &3666006750522798532
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -96,7 +97,27 @@ MonoBehaviour:
   m_GameObject: {fileID: 8003495884289897023}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b688439805db0e4180de8a19d724124, type: 3}
+  m_Script: {fileID: 11500000, guid: 1035bf5b648811a4cbe996c47e36be68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 90
+  planet: {fileID: 0}
+  orbitSpeed: 30
+  reverseOrbitDirection: 0
+  spinSpeed: 50
+  initialScale: 0.8
+  scaleAmplitude: 1
+  scaleFrequency: 2
+--- !u!114 &2906022488032356875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8003495884289897023}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b4abbb861cc02c4e84dcc77bacdacc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  extraRadius: 0
+  gizmoColor: {r: 0, g: 1, b: 0, a: 1}
