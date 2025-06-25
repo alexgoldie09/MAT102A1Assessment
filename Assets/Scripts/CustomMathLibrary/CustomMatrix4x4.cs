@@ -1,45 +1,49 @@
 ﻿using System;
 using UnityEngine;
 
-/// <summary>
-/// Represents a 4x4 matrix with basic math operations.
-/// This can be used for transforms (translation, rotation, scaling).
-/// </summary>
+/*
+ * CustomMatrix4x4.cs
+ * -------------------
+ * This struct defines a custom 4x4 matrix structure for use in manual 3D transformations 
+ * such as translation, rotation, and scaling.
+ * It simulates Unity's Matrix4x4 but simplified for only needed functionality.
+ *
+ * Tasks:
+ *  - Implements matrix addition, multiplication (both matrix-matrix and matrix-vector).
+ *  - Provides methods for constructing translation, rotation (Euler and axis-angle), and scaling matrices.
+ *  - Converts to Unity's native Matrix4x4 when needed for rendering or debug.
+ * 
+ * Extras:
+ *  - Matrix operations follow standard linear algebra rules.
+ *  - Rotation matrices are constructed using Euler angles for axis-based rotation.
+ *  - Homogeneous coordinates are assumed (w = 1) for correct transformation behaviour in 3D space.
+ *  - Struct was used as it is more memory efficient for constant math implementations.
+ *  - Methods are static to be accessible by all scripts.
+ */
+
 public struct CustomMatrix4x4
 {
-    // The matrix data: 4x4 array of floats
-    public float[,] m;
+    public float[,] m; // 4x4 matrix array
 
-    /// <summary>
-    /// Constructor: initializes a matrix.
-    /// If 'identity' is true → creates identity matrix (diagonal = 1).
-    /// </summary>
+    // Constructor: Initialises a 4x4 matrix but optionally can make an identity matrix.
     public CustomMatrix4x4(bool identity = false)
     {
         m = new float[4, 4];
         if (identity)
         {
-            // Fill diagonal with 1's → identity matrix
+            // Fill diagonal with 1's = identity matrix
             for (int i = 0; i < 4; i++)
                 m[i, i] = 1f;
         }
     }
 
-    /// <summary>
-    /// Creates an empty matrix (m array initialized).
-    /// </summary>
-    public static CustomMatrix4x4 CreateEmpty()
-    {
-        return new CustomMatrix4x4(false);
-    }
-
-    /// <summary>
-    /// Adds two 4x4 matrices.
-    /// Result.m[row, col] = a.m[row, col] + b.m[row, col]
-    /// </summary>
+    /*
+     * Overloading (+) operator adds two matrices element-wise.
+     * Result.m[row, col] = a.m[row, col] + b.m[row, col]
+    */
     public static CustomMatrix4x4 operator +(CustomMatrix4x4 a, CustomMatrix4x4 b)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4(true);
+        CustomMatrix4x4 result = new CustomMatrix4x4(false);
         for (int row = 0; row < 4; row++)
         {
             for (int col = 0; col < 4; col++)
@@ -50,13 +54,13 @@ public struct CustomMatrix4x4
         return result;
     }
 
-    /// <summary>
-    /// Multiplies two 4x4 matrices (matrix multiplication).
-    /// Standard definition: result[row, col] = sum over k of (a[row, k] * b[k, col])
-    /// </summary>
+    /*
+     * Overloading (*) operator adds standard row-column dot product (A * B).
+     * Result[row, col] = sum over k of (a[row, k] * b[k, col])
+    */
     public static CustomMatrix4x4 operator *(CustomMatrix4x4 a, CustomMatrix4x4 b)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4(true);
+        CustomMatrix4x4 result = new CustomMatrix4x4(false);
         for (int row = 0; row < 4; row++)
         {
             for (int col = 0; col < 4; col++)
@@ -64,7 +68,6 @@ public struct CustomMatrix4x4
                 float sum = 0f;
                 for (int k = 0; k < 4; k++)
                 {
-                    // Multiply row of 'a' with column of 'b'
                     sum += a.m[row, k] * b.m[k, col];
                 }
                 result.m[row, col] = sum;
@@ -73,11 +76,11 @@ public struct CustomMatrix4x4
         return result;
     }
 
-    /// <summary>
-    /// Multiplies a matrix by a vector (Matrix * Vector).
-    /// Assumes vector w=1 for homogeneous coordinate (so translation is applied).
-    /// Result is a transformed 3D vector.
-    /// </summary>
+    /*
+     * Overloading (*) operator can also multiply a matrix by a vector.
+     * Applies transformation to a point (w = 1).
+     * Result is a transformed 3D vector.
+    */
     public static CustomVector3 operator *(CustomMatrix4x4 matrix, CustomVector3 vector)
     {
         float x = matrix.m[0, 0] * vector.x + matrix.m[0, 1] * vector.y + matrix.m[0, 2] * vector.z + matrix.m[0, 3];
@@ -87,54 +90,69 @@ public struct CustomMatrix4x4
         return new CustomVector3(x, y, z);
     }
 
-    /// <summary>
-    /// Creates a translation matrix.
-    /// Moves objects by (tx, ty, tz).
-    /// </summary>
+    /*
+     * CreateTranslation() creates a translation matrix.
+     * - Used for moving objects by (tx, ty, tz).
+     * [ 1  0  0  tx ]
+     * [ 0  1  0  ty ]
+     * [ 0  0  1  tz ]
+     * [ 0  0  0   1 ]
+    */
     public static CustomMatrix4x4 CreateTranslation(float tx, float ty, float tz)
     {
         CustomMatrix4x4 result = new CustomMatrix4x4(true); // start with identity
-        result.m[0, 3] = tx; // set translation component for x
-        result.m[1, 3] = ty; // set translation component for y
-        result.m[2, 3] = tz; // set translation component for z
+        result.m[0, 3] = tx;
+        result.m[1, 3] = ty;
+        result.m[2, 3] = tz;
         return result;
     }
 
-    /// <summary>
-    /// Creates a scaling matrix.
-    /// Scales objects by (sx, sy, sz).
-    /// </summary>
+    /*
+     * CreateScaling() creates a scaling matrix.
+     * - Used for non-uniform scaling of objects by (sx, sy, sz).
+     * [ sx  0   0   0 ]
+     * [ 0   sy  0   0 ]
+     * [ 0   0   sz  0 ]
+     * [ 0   0   0   1 ]
+    */
     public static CustomMatrix4x4 CreateScaling(float sx, float sy, float sz)
     {
-        CustomMatrix4x4 result = new CustomMatrix4x4(true);
-        result.m[0, 0] = sx; // scale X axis
-        result.m[1, 1] = sy; // scale Y axis
-        result.m[2, 2] = sz; // scale Z axis
+        CustomMatrix4x4 result = new CustomMatrix4x4(true); // start with identity
+        result.m[0, 0] = sx;
+        result.m[1, 1] = sy;
+        result.m[2, 2] = sz;
         result.m[3, 3] = 1f; // homogeneous coordinate stays 1
         return result;
     }
 
-    /// <summary>
-    /// Creates a rotation matrix around the Z-axis.
-    /// Rotates by angleDegrees (clockwise).
-    /// </summary>
+    /*
+     * CreateRotationZ() creates a rotation matrix around the Z-axis (roll).
+     *  [ cosθ  -sinθ  0   0 ]
+     *  [ sinθ   cosθ  0   0 ]
+     *  [  0      0    1   0 ]
+     *  [  0      0    0   1 ]
+    */
     public static CustomMatrix4x4 CreateRotationZ(float angleDegrees)
     {
-        float rad = angleDegrees * (float)Math.PI / 180f;
-        float cos = (float)Math.Cos(rad);
-        float sin = (float)Math.Sin(rad);
+        float rad = angleDegrees * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad);
+        float sin = Mathf.Sin(rad);
 
         CustomMatrix4x4 result = new CustomMatrix4x4(true); // start with identity
-        result.m[0, 0] = cos;   // cos(theta)
-        result.m[0, 1] = -sin;  // -sin(theta)
-        result.m[1, 0] = sin;   // sin(theta)
-        result.m[1, 1] = cos;   // cos(theta)
+        result.m[0, 0] = cos;
+        result.m[0, 1] = -sin;
+        result.m[1, 0] = sin;
+        result.m[1, 1] = cos;
         return result;
     }
 
-    /// <summary>
-    /// Creates a rotation matrix around the Y-axis (yaw).
-    /// </summary>
+    /*
+     * CreateRotationY() creates a rotation matrix around the Y-axis (yaw).
+     *  [ cosθ   0  sinθ   0 ]
+     *  [  0     1   0     0 ]
+     *  [−sinθ   0  cosθ   0 ]
+     *  [  0     0   0     1 ]
+    */
     public static CustomMatrix4x4 CreateRotationY(float angleDegrees)
     {
         float rad = angleDegrees * Mathf.Deg2Rad;
@@ -149,9 +167,13 @@ public struct CustomMatrix4x4
         return result;
     }
 
-    /// <summary>
-    /// Creates a rotation matrix around the X-axis (pitch).
-    /// </summary>
+    /*
+     * CreateRotationX() creates a rotation matrix around the X-axis (pitch).
+     *  [ 1    0       0     0 ]
+     *  [ 0  cosθ   -sinθ    0 ]
+     *  [ 0  sinθ    cosθ    0 ]
+     *  [ 0    0       0     1 ]
+    */
     public static CustomMatrix4x4 CreateRotationX(float angleDegrees)
     {
         float rad = angleDegrees * Mathf.Deg2Rad;
@@ -166,99 +188,29 @@ public struct CustomMatrix4x4
         return result;
     }
 
-
-    /// <summary>
-    /// Creates a full rotation matrix from Euler angles (pitch, yaw, roll in degrees).
-    /// Order of operations: Z (roll), X (pitch), Y (yaw).
-    /// </summary>
-    public static CustomMatrix4x4 CreateRotationXYZ(float pitch, float yaw, float roll)
+    /*
+     * CreateRotationXYZ() creates a composite rotation matrix in XYZ order.
+     * - Applies X (pitch), then Y (yaw), then Z (roll).
+    */
+    public static CustomMatrix4x4 CreateRotationXYZ(float pitchDegrees, float yawDegrees, float rollDegrees)
     {
-        float radX = pitch * Mathf.Deg2Rad;
-        float radY = yaw * Mathf.Deg2Rad;
-        float radZ = roll * Mathf.Deg2Rad;
+        CustomMatrix4x4 rx = CreateRotationX(pitchDegrees);
+        CustomMatrix4x4 ry = CreateRotationY(yawDegrees);
+        CustomMatrix4x4 rz = CreateRotationZ(rollDegrees);
 
-        float cx = Mathf.Cos(radX); float sx = Mathf.Sin(radX);
-        float cy = Mathf.Cos(radY); float sy = Mathf.Sin(radY);
-        float cz = Mathf.Cos(radZ); float sz = Mathf.Sin(radZ);
-
-        // Composite rotation matrix R = Rz * Rx * Ry
-        CustomMatrix4x4 result = new CustomMatrix4x4(true);
-
-        result.m[0, 0] = cy * cz + sx * sy * sz;
-        result.m[0, 1] = -cy * sz + sx * sy * cz;
-        result.m[0, 2] = cx * sy;
-        result.m[0, 3] = 0;
-
-        result.m[1, 0] = cx * sz;
-        result.m[1, 1] = cx * cz;
-        result.m[1, 2] = -sx;
-        result.m[1, 3] = 0;
-
-        result.m[2, 0] = -sy * cz + sx * cy * sz;
-        result.m[2, 1] = sy * sz + sx * cy * cz;
-        result.m[2, 2] = cx * cy;
-        result.m[2, 3] = 0;
-
-        result.m[3, 0] = 0;
-        result.m[3, 1] = 0;
-        result.m[3, 2] = 0;
-        result.m[3, 3] = 1;
-
-        return result;
+        // Note: The order of multiplication matters — this is XYZ (Rz * Ry * Rx)
+        return rz * ry * rx;
     }
 
-    /// <summary>
-    /// Creates a rotation matrix around an arbitrary axis (unit vector) by angleDegrees.
-    /// Uses Rodrigues' rotation formula.
-    /// </summary>
-    public static CustomMatrix4x4 CreateRotationAroundAxis(CustomVector3 axis, float angleDegrees)
-    {
-        float rad = angleDegrees * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(rad);
-        float sin = Mathf.Sin(rad);
-        float oneMinusCos = 1f - cos;
-
-        axis = axis.Normalize(); // ensure axis is a unit vector
-
-        float x = axis.x;
-        float y = axis.y;
-        float z = axis.z;
-
-        CustomMatrix4x4 result = new CustomMatrix4x4(true);
-
-        result.m[0, 0] = cos + x * x * oneMinusCos;
-        result.m[0, 1] = x * y * oneMinusCos - z * sin;
-        result.m[0, 2] = x * z * oneMinusCos + y * sin;
-        result.m[0, 3] = 0;
-
-        result.m[1, 0] = y * x * oneMinusCos + z * sin;
-        result.m[1, 1] = cos + y * y * oneMinusCos;
-        result.m[1, 2] = y * z * oneMinusCos - x * sin;
-        result.m[1, 3] = 0;
-
-        result.m[2, 0] = z * x * oneMinusCos - y * sin;
-        result.m[2, 1] = z * y * oneMinusCos + x * sin;
-        result.m[2, 2] = cos + z * z * oneMinusCos;
-        result.m[2, 3] = 0;
-
-        result.m[3, 0] = 0;
-        result.m[3, 1] = 0;
-        result.m[3, 2] = 0;
-        result.m[3, 3] = 1;
-
-        return result;
-    }
-
-    /// <summary>
-    /// Converts this CustomMatrix4x4 to UnityEngine.Matrix4x4.
-    /// Useful for passing to shaders or advanced transform effects.
-    /// </summary>
+    /*
+     * ToUnityMatrix4x4() converts this CustomMatrix4x4 to UnityEngine.Matrix4x4.
+     * - Useful for passing advanced transform effects.
+     * - Unity Matrix4x4 is column-major.
+    */
     public Matrix4x4 ToUnityMatrix4x4()
     {
         Matrix4x4 unityMatrix = new Matrix4x4();
 
-        // Unity Matrix4x4 is column-major, but you can assign row/column directly.
-        // Our m[row,col] maps to Unity m[row,col].
         for (int row = 0; row < 4; row++)
         {
             for (int col = 0; col < 4; col++)
@@ -270,10 +222,10 @@ public struct CustomMatrix4x4
         return unityMatrix;
     }
 
-
-    /// <summary>
-    /// Helper method: prints the matrix to console (for debugging).
-    /// </summary>
+    /*
+     * Print() displays the matrix to console.
+     * - Useful for debugging.
+    */
     public void Print()
     {
         for (int row = 0; row < 4; row++)

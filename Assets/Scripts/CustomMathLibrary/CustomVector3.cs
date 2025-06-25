@@ -1,17 +1,31 @@
 ﻿using System;
 using UnityEngine;
 
-/// <summary>
-/// Represents a 3D vector with basic math operations.
-/// Useful for positions, directions, velocities, etc.
-/// </summary>
+/*
+ * CustomVector3.cs
+ * ----------------
+ * This struct defines a 3D vector class for use in custom math operations.
+ * It simulates Unity's Vector3 but simplified for only needed functionality.
+ *
+ * Tasks:
+ * - Applies basic vector math operations:
+ *   + Addition, subtraction, scalar multiplication.
+ * - Applies vector analysis:
+ *   + Magnitude, normalization, dot product, cross product.
+ * - Other functions include:
+ *   + Linear interpolation (Lerp), angle calculation between vectors.
+ *   + Conversion to UnityEngine.Vector3 for use in the engine.
+ *
+ * Extras:
+ * - Struct was used as it is more memory efficient for constant math implementations.
+ * - Methods are static to be accessible by all scripts.
+ */
+
 public struct CustomVector3
 {
     public float x, y, z;
 
-    /// <summary>
-    /// Constructor: initializes vector with given x, y, z values.
-    /// </summary>
+    // Constructor: Initialises vector with given x, y, z values.
     public CustomVector3(float x, float y, float z)
     {
         this.x = x;
@@ -19,48 +33,48 @@ public struct CustomVector3
         this.z = z;
     }
 
-    /// <summary>
-    /// Adds two vectors (component-wise).
-    /// Result.x = a.x + b.x, etc.
-    /// </summary>
+    /*
+     * Overloading (+) operator adds two vectors (component-wise).
+     * Result.x = a.x + b.x
+    */
     public static CustomVector3 operator +(CustomVector3 a, CustomVector3 b)
     {
         return new CustomVector3(a.x + b.x, a.y + b.y, a.z + b.z);
     }
 
-    /// <summary>
-    /// Subtracts two vectors (component-wise).
-    /// Result.x = a.x - b.x, etc.
-    /// </summary>
+    /*
+     * Overloading (-) operator subtracts two vectors (component-wise).
+     * Result.x = a.x - b.x
+    */
     public static CustomVector3 operator -(CustomVector3 a, CustomVector3 b)
     {
         return new CustomVector3(a.x - b.x, a.y - b.y, a.z - b.z);
     }
 
-    /// <summary>
-    /// Multiplies vector by scalar (scales vector length).
-    /// Result.x = v.x * scalar, etc.
-    /// </summary>
+    /*
+     * Overloading (*) operator multiplies a vector by scalar value.
+     * Result.x = v.x * scalar
+    */
     public static CustomVector3 operator *(CustomVector3 v, float scalar)
     {
         return new CustomVector3(v.x * scalar, v.y * scalar, v.z * scalar);
     }
 
-    /// <summary>
-    /// Computes dot product of two vectors.
-    /// Returns a single float: a · b = sum of (a_i * b_i).
-    /// Geometric meaning: measures "alignment" of the vectors.
-    /// </summary>
+    /*
+     * Dot() calculates the dot product of two vectors.
+     * Indicates how aligned the two vectors are.
+     * Returns a single float: a · b = sum of (a_i * b_i).
+    */
     public static float Dot(CustomVector3 a, CustomVector3 b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    /// <summary>
-    /// Computes cross product of two vectors.
-    /// Result is a new vector perpendicular to both inputs.
-    /// Useful for finding surface normals.
-    /// </summary>
+    /*
+     * Cross() calculates the cross product of two vectors.
+     * Returns a vector that is perpendicular to the two input vectors.
+     * - Follows right-hand rule for orientation.
+    */
     public static CustomVector3 Cross(CustomVector3 a, CustomVector3 b)
     {
         return new CustomVector3(
@@ -70,30 +84,31 @@ public struct CustomVector3
         );
     }
 
-    /// <summary>
-    /// Computes the magnitude (length) of the vector.
-    /// Formula: sqrt(x² + y² + z²).
-    /// </summary>
+    /*
+     * Magnitude() calculates the magnitude (length) of the vector.
+     * Represents the Euclidean length of the vector.
+     * Returns a single float: sqrt(x² + y² + z²).
+    */
     public float Magnitude()
     {
-        return (float)Math.Sqrt(x * x + y * y + z * z);
+        return Mathf.Sqrt(x * x + y * y + z * z);
     }
 
-    /// <summary>
-    /// Returns a normalized copy of the vector.
-    /// Result has length 1 but same direction.
-    /// If original vector is zero, returns (0,0,0).
-    /// </summary>
+    /*
+     * Normalize() returns a normalized copy of the vector.
+     * Result has length 1 but same direction.
+     * - If original vector is zero, returns (0,0,0).
+    */
     public CustomVector3 Normalize()
     {
         float mag = Magnitude();
         return mag == 0 ? new CustomVector3(0, 0, 0) : new CustomVector3(x / mag, y / mag, z / mag);
     }
 
-    /// <summary>
-    /// Linearly interpolates between two CustomVector3 vectors.
-    /// t = 0 → returns a, t = 1 → returns b.
-    /// </summary>
+    /*
+     * Lerp() linearly interpolates between two vectors based on the interpolant.
+     * t = 0 returns a, t = 1 returns b, t = 0.5 returns mid point between a and b.
+    */
     public static CustomVector3 Lerp(CustomVector3 a, CustomVector3 b, float t)
     {
         // Clamp t between 0 and 1 for safety
@@ -106,29 +121,29 @@ public struct CustomVector3
         );
     }
 
-    /// <summary>
-    /// Computes the angle in degrees between two CustomVector3 directions.
-    /// Useful for directional comparison or alignment logic.
-    /// </summary>
+    /*
+     * AngleBetween() calculates the angle in degrees between two vectors.
+     * - Useful for steering and orientation.
+    */
     public static float AngleBetween(CustomVector3 a, CustomVector3 b)
     {
         float dot = Dot(a.Normalize(), b.Normalize());
         return Mathf.Acos(Mathf.Clamp(dot, -1f, 1f)) * Mathf.Rad2Deg;
     }
 
-    /// <summary>
-    /// Converts this CustomVector3 to UnityEngine.Vector3.
-    /// </summary>
+    /*
+     * ToUnityVector3() converts this CustomVector3 to UnityEngine.Vector3.
+     * - For compatibility with Unity's transform system.
+    */
     public Vector3 ToUnityVector3()
     {
         return new Vector3(x, y, z);
     }
 
-
-    /// <summary>
-    /// Returns a readable string representation of the vector.
-    /// Useful for debugging.
-    /// </summary>
+    /*
+     * Overrides ToString() to return a string representation of the vector.
+     * - Useful for debugging.
+    */
     public override string ToString()
     {
         return $"({x}, {y}, {z})";
