@@ -1,17 +1,20 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /*
  * GameManager.cs
  * --------------
- * This script defines a basic singleton GameManager responsible for reloading the scene
- * after a game over event, typically after the player's spaceship has been destroyed.
+ * This script switches between scenes and triggers game over.
  *
  * Tasks:
  *  - Implements a persistent singleton pattern using `DontDestroyOnLoad`.
  *  - Provides a `TriggerGameOver` method to initiate a scene reload after a timed delay.
- *  - Useful in decoupling gameplay logic from scene management for clean modularity.
+ *  - It uses methods that are accessed via buttons in Unity.
+ *   + Methods load scene using Unity's SceneManager.
  *
  * Extras:
  *  - The reload delay allows VFX or transition animations to complete before resetting.
@@ -43,20 +46,39 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    /*
-     * TriggerGameOver() triggers a delayed scene reload (e.g., after death).
-    */
+    // LoadScene01() loads in this specific scene (Name has to be spelt correctly).
+    public void LoadScene01()
+    {
+        SceneManager.LoadScene(sceneToReload);
+    }
+
+    // ReturnToMainMenu() loads in this specific scene (Name has to be spelt correctly).
+    public void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    // QuitGame() ends the game session.
+    public void QuitGame()
+    {
+#if UNITY_EDITOR
+        // Stop playing in the editor.
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    // TriggerGameOver() triggers a delayed scene reload (e.g., after death).
     public void TriggerGameOver(float delay = 5f)
     {
         StartCoroutine(ReloadSceneAfterDelay(delay));
     }
 
-    /*
-     * ReloadSceneAfterDelay() coroutine delays before reloading the specified scene.
-    */
+    // ReloadSceneAfterDelay() coroutine delays before reloading the specified scene.
     private IEnumerator ReloadSceneAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        SceneManager.LoadScene(sceneToReload);
+        LoadScene01();
     }
 }
